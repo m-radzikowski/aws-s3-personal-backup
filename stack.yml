@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUpload
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 3
+          - Id: NoncurrentVersionExpiration
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NewerNoncurrentVersions: 3
+              NoncurrentDays: 30
+
+  BackupUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: s3-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:*MultipartUpload*'
+                  - 's3:ListBucket'
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub '${BackupBucket.Arn}'
+                  - !Sub '${BackupBucket.Arn}/*'
+
+Outputs:
+
+  BackupBucketName:
+    Value: !Ref BackupBucket
+
+  BackupUserName:
+    Value: !Ref BackupUser
